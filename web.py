@@ -10,8 +10,14 @@ import shutil
 from main import download_audio
 
 app = FastAPI() 
-templates = Jinja2Templates(directory="templates") #for the html file
-app.mount("/static", StaticFiles(directory="static"), name="static") #mounting the css file into fastapi
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates_path = os.path.join(BASE_DIR, "templates")
+static_path = os.path.join(BASE_DIR, "static")
+
+templates = Jinja2Templates(directory=templates_path)
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 
 @app.get("/")
 def home(request: Request):
@@ -24,13 +30,13 @@ def cleanup_folder(folder_path: str):
         print(f"Cleaned up {folder_path}")
 
 @app.post("/download")
-# BackgroundTasks added here!
 def process_download(background_tasks: BackgroundTasks, url: str = Form(...)):
     
     print(f"Received URL from browser: {url}")
 
     unique_id = str(uuid.uuid4())
-    temp_dir = os.path.join("downloads", unique_id)
+    # Updated to use BASE_DIR safely
+    temp_dir = os.path.join(BASE_DIR, "downloads", unique_id)
     
     # Download the audio
     download_audio(url, output_dir=temp_dir)
@@ -48,4 +54,4 @@ def process_download(background_tasks: BackgroundTasks, url: str = Form(...)):
     return FileResponse(path=file_path, filename=file_name, media_type='audio/mp4')
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run("web:app", host="0.0.0.0", port=8000, reload=True)
