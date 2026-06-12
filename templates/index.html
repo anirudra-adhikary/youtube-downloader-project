@@ -2,15 +2,24 @@
 <html>
 <head>
     <title>Savit</title>
+
+    <!-- Mobile Responsive -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link href="/static/style.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <h2>Savit</h2>
-        <h2>Download high quality audio</h3>
+        <h3>Download high quality audio</h3>
+
         <form action="/download" method="post">
-            <input type="text" name="url" placeholder="Place YouTube URL here" required>
-            <br>
+            <input
+                type="text"
+                name="url"
+                placeholder="Place YouTube URL here"
+                required
+            >
             <button type="submit">Download</button>
         </form>
     </div>
