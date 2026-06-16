@@ -37,7 +37,8 @@ Downloading and processing video files from external sources at scale requires c
 youtube-downloader-project/
 ├── static/              # CSS, JavaScript, and other static web assets
 ├── templates/           # HTML templates for the web interface
-├── crop.py              # Script for processing and cropping media
+├── crop.py              # Script for processing and cropping media  
+├── gui.py               # GUI Application entry point / flet app
 ├── main.py              # Application entry point / core execution logic
 ├── web.py               # Web server and routing logic
 ├── requirements.txt     # Python dependencies
@@ -92,6 +93,23 @@ Make sure you have Python installed on your system.
 
 2. Open your web browser and navigate to the localhost port specified in the console (usually `http://127.0.0.1:5000` or `http://127.0.0.1:8000`).
 3. Enter a valid YouTube URL into the interface and initiate the download.
+
+### Run as Flet app (GUI)
+
+Run as a desktop app:
+
+```bash
+flet run gui.py
+```
+
+Run as a web app:
+
+```bash
+flet run --web gui.py
+```
+
+For more details on running the **Flet app**, refer to the [Getting Started Guide](https://flet.dev/docs/).
+
 
 ## 🧠 System Design Learnings
 
