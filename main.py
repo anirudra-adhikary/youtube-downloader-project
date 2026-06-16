@@ -12,7 +12,7 @@ def my_hook(d):
         print(f"Downloading: {percent} at {speed} ETA {eta}")
 
 
-def search_and_select(query, num_results=5):
+def search_and_select(query, num_results=5, cli=True):
     print(f"\nSearching YouTube for: '{query}'...")
     
     ydl_opts = {
@@ -52,7 +52,7 @@ def search_and_select(query, num_results=5):
 
     print("[0] Cancel")
 
-    while True:
+    while cli and True:
         try:
             choice = int(input(f"Select a video (0-{len(entries)}): ").strip())
             if choice == 0:
@@ -113,11 +113,12 @@ def download_audio(url, output_dir='downloads'):
         print(f"\nAn error occurred:\n{e}")
 
 
-def show_formats(url):
+def show_formats(url, cli=False):
+    list_of_formats = []
     with yt_dlp.YoutubeDL() as ydl:
         try:
             info = ydl.extract_info(url, download=False)
-            formats = info.get('formats', [])
+            formats = info.get("formats", [])
         except Exception as e:
             print(f"Error fetching video info: {e}")
             return None
@@ -157,20 +158,33 @@ def show_formats(url):
             f"{f_id:<10} {ext:<10} {res:<15} "
             f"{content_type:<15} {size_mb:<12} {note}"
         )
+        
+        list_of_formats.append({
+            "id": f_id,
+            "extension": ext,
+            "resolution": res,
+            "content": content_type,
+            "size": size_mb,
+            "note": note
+        })
+        
+    if cli:
+        choice = input("\nEnter Format ID (example: 18 or 137+140): ")
+        return choice
+    else:
+        return list_of_formats or ["no data"]
 
-    choice = input("\nEnter Format ID (example: 18 or 137+140): ")
-    return choice
 
-
-def download_video(url, output_dir='downloads'):
+def download_video(url, selected_format, cli=False, output_dir="downloads"):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
-    selected_format = show_formats(url)
+    
+    # selected_format = show_formats(url,cli=True)
 
     if not selected_format:
         print("No format selected.")
-        return
+        # return
+        selected_format = 18  # selecting default format
 
     ydl_opts = {
         'format': selected_format,
@@ -190,6 +204,7 @@ def download_video(url, output_dir='downloads'):
         print(f"\nDownload error:\n{e}")
     except Exception as e:
         print(f"\nUnexpected error:\n{e}")
+    return True
 
 
 if __name__ == "__main__":
@@ -218,6 +233,7 @@ if __name__ == "__main__":
     if choice == 'y':
         download_audio(url)
     elif choice == 'n':
-        download_video(url)
+        get_download_format=show_formats(url,cli=True)
+        download_video(url=url,selected_format=get_download_format,cli=True)
     else:
         print("Invalid choice")
