@@ -10,6 +10,53 @@ def main(page: ft.Page):
     format_selection = 18
 
     # =============== Interaction Functions =============== #
+    async def process_input_is_link_or_search():
+        user_input = search_link.value
+        if not user_input.startswith(("http://", "https://", "www.")):
+            loading_shimmer.visible = True
+            page.update()
+            await asyncio.sleep(3)  # time to reflect loading_shimmer
+            search_string_submited()  # search & select video link
+            loading_shimmer.visible = False
+        else:
+            loading_circle.visible = True
+            page.update()
+            await asyncio.sleep(3)  # time to reflect loading_circle
+            link_submited()  # select format then download
+            loading_circle.visible = False
+        page.update()
+
+    def search_string_submited():
+        search = search_link.value
+        if not search:
+            return
+        result = search_and_select(search, cli=False)
+        if not result:
+            return
+        for i in result:
+            # i = {"title": title,"channel": uploader,"duration": duration,"download_url": entry.get("url")}
+            videos_list.controls.append(
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.SMART_DISPLAY_OUTLINED),
+                    title=ft.Text(
+                        i.get("title"), no_wrap=True, overflow=ft.TextOverflow.FADE
+                    ),
+                    subtitle=f"by {i.get('channel')} | (duration: {i.get('duration')})",
+                    data=i.get("download_url"),
+                    on_click=handle_tile_click,
+                )
+            )
+        videos_list.visible = True
+        page.update()
+
+    async def handle_tile_click(e):
+        print(e)
+        print(e.control)
+        url = e.control.data
+        print(url)
+        search_link.value = url
+        await process_input_is_link_or_search()
+
     def link_submited():
         nonlocal url
         url = search_link.value
@@ -46,22 +93,43 @@ def main(page: ft.Page):
         print(f"GUI>> url={url}, selected_format={format_selection}")
         ret_val = download_video(url, format_selection)
         if ret_val:
-            page.add(ft.Text("Download Complete"))
+            download_complete_indicator.visible = True
             progress_bar.value = 1.0
             page.update()
+
+    def clear_all():
+        progress_bar.visible = False
+        download_button.visible = False
+        videos_list.controls.clear()
+        dropdown_format_select.visible = False
+        download_complete_indicator.visible = False
+        search_link.value = ""
+        page.update()
 
     # =============== GUI elements ================ #
     search_link = ft.TextField(
         label="Search YouTube or Put download link",
         autofocus=True,
         expand=True,
-        on_submit=link_submited,
+        on_submit=process_input_is_link_or_search,
         suffix_icon=ft.IconButton(
-            ft.Icons.DOWNLOAD,
-            on_click=link_submited,
+            ft.Icons.SEARCH,
+            on_click=process_input_is_link_or_search,
         ),
     )
-    # content_list = (ft.ListView(),) ##TODO
+    videos_list = ft.ListView(
+        divider_thickness=10,
+        scroll=ft.ScrollMode.AUTO,
+    )
+    loading_shimmer = ft.Shimmer(
+        base_color=ft.Colors.with_opacity(0.3, ft.Colors.GREY_400),
+        visible=False,
+        highlight_color=ft.Colors.WHITE_60,
+        content=ft.Column(
+            [ft.Container(height=54, bgcolor=ft.Colors.GREY_300) for _ in range(5)]
+        ),
+    )
+    loading_circle = ft.ProgressRing(visible=False)
     dropdown_format_select = ft.Dropdown(
         expand=True,
         visible=False,
@@ -74,6 +142,11 @@ def main(page: ft.Page):
         visible=False,
         on_click=click_download,
     )
+    download_complete_indicator = ft.Text(
+        "Download Completed",
+        visible=False,
+    )
+    clear_button = ft.Button("Clear All", on_click=clear_all)
 
     # =============== main GUI part ================ #
     page.window.width = 600
@@ -83,9 +156,14 @@ def main(page: ft.Page):
     page.appbar = ft.AppBar(title="YouTube Downloader", center_title=True)
     page.add(
         search_link,
+        loading_shimmer,
+        videos_list,
+        loading_circle,
         dropdown_format_select,
         download_button,
         progress_bar,
+        download_complete_indicator,
+        clear_button,
     )
 
 

@@ -22,6 +22,7 @@ def search_and_select(query, num_results=5, cli=True):
     }
     
     search_query = f"ytsearch{num_results}:{query}"
+    result_list = []
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -50,6 +51,15 @@ def search_and_select(query, num_results=5, cli=True):
         print(f"[{i+1}] {title}")
         print(f"    Channel: {uploader} | Duration: {dur_str}\n")
 
+        result_list.append(
+            {
+                "title": title,
+                "channel": uploader,
+                "duration": dur_str,
+                "download_url": entry.get("url"),
+            }
+        )
+
     print("[0] Cancel")
 
     while cli and True:
@@ -65,6 +75,8 @@ def search_and_select(query, num_results=5, cli=True):
             print("Invalid choice. Try again.")
         except ValueError:
             print("Please enter a valid number.")
+
+    return result_list
 
 
 def download_audio(url, output_dir='downloads'):
@@ -218,7 +230,7 @@ if __name__ == "__main__":
     if user_input.startswith("http://") or user_input.startswith("https://") or user_input.startswith("www."):
         url = user_input
     else:
-        url = search_and_select(user_input)
+        url = search_and_select(user_input, cli=True)
 
     if not url:
         exit()
