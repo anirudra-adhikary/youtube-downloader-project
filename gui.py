@@ -1,6 +1,8 @@
+import asyncio
+
 import flet as ft
 
-from main import download_audio, download_video, show_formats
+from main import download_video, search_and_select, show_formats
 
 
 def main(page: ft.Page):
@@ -15,46 +17,42 @@ def main(page: ft.Page):
         if not url:
             return
         formats = show_formats(url, cli=False)
-        print(f"GUI>> {formats}")
+        # print(f"GUI>> {formats}")
         if not formats:
             return
         for i in formats:
             display = f"{i.get('resolution'):<10} |   {i.get('extension'):<8} |   {i.get('content'):<8} |   {i.get('size')}"
             dropdown_format_select.options.append(
                 ft.DropdownOption(
-                    ## TODO: Adjusting json
                     text=display,
                     key=i.get("id"),
                 ),
             )
-        dropdown_format_select.disabled = False
+        dropdown_format_select.visible = True
         page.update()
-
-    ## TODO
-    def handle_search_video():
-        pass
 
     def handle_dropdown_select(e):
         nonlocal format_selection
         print(f"GUI event={e}")
         format_selection = e.data
         download_button.visible = True
-        download_button.disabled = False
         page.update()
 
-    def handle_button_click(e):
+    async def click_download(e):
         progress_bar.visible = True
         page.update()
+        await asyncio.sleep(1)  # time to update ui
         nonlocal url, format_selection
         print(f"GUI>> url={url}, selected_format={format_selection}")
         ret_val = download_video(url, format_selection)
         if ret_val:
             page.add(ft.Text("Download Complete"))
-            download_button.disabled = True
+            progress_bar.value = 1.0
+            page.update()
 
     # =============== GUI elements ================ #
     search_link = ft.TextField(
-        label="Put download link",
+        label="Search YouTube or Put download link",
         autofocus=True,
         expand=True,
         on_submit=link_submited,
@@ -66,16 +64,15 @@ def main(page: ft.Page):
     # content_list = (ft.ListView(),) ##TODO
     dropdown_format_select = ft.Dropdown(
         expand=True,
-        disabled=True,
+        visible=False,
         text="Select Format",
         on_select=handle_dropdown_select,
     )
     progress_bar = ft.ProgressBar(visible=False)
     download_button = ft.Button(
         content="download",
-        disabled=True,
-        expand=True,
-        on_click=handle_button_click,
+        visible=False,
+        on_click=click_download,
     )
 
     # =============== main GUI part ================ #
