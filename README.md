@@ -41,7 +41,8 @@ youtube-downloader-project/
 ├── gui.py               # GUI Application entry point / flet app
 ├── main.py              # Application entry point / core execution logic
 ├── web.py               # Web server and routing logic
-├── requirements.txt     # Python dependencies
+├── requirements.txt     # Python dependencies (minimal)
+├── requirements-fletapp.txt  # Python dependencies for flet GUI app development
 └── .gitignore           # Ignored files and directories
 
 ```
@@ -79,7 +80,7 @@ Make sure you have Python installed on your system.
 
 ```bash
    pip install -r requirements.txt
-
+   # use `requirements-fletapp.txt` for flet app
 ```
 
 ## 💻 Usage
@@ -110,6 +111,55 @@ flet run --web gui.py
 
 For more details on running the **Flet app**, refer to the [Getting Started Guide](https://flet.dev/docs/).
 
+### Build the flet app
+
+Build as Android apk
+
+```bash
+flet build apk -v
+```
+
+For more details on building and signing `.apk` or `.aab`, refer to the [Android Packaging Guide](https://flet.dev/docs/publish/android/).
+
+Build as iOS app
+
+```bash
+flet build ipa -v
+```
+
+For more details on building and signing `.ipa`, refer to the [iOS Packaging Guide](https://flet.dev/docs/publish/ios/).
+
+Build as macOS app
+
+```bash
+flet build macos -v
+```
+
+For more details on building macOS package, refer to the [macOS Packaging Guide](https://flet.dev/docs/publish/macos/).
+
+Build as Linux app
+
+```bash
+flet build linux -v
+```
+
+For more details on building Linux package, refer to the [Linux Packaging Guide](https://flet.dev/docs/publish/linux/).
+
+Build as Windows app
+
+```bash
+flet build windows -v
+```
+
+For more details on building Windows package, refer to the [Windows Packaging Guide](https://flet.dev/docs/publish/windows/).
+
+Build as Web app
+
+```bash
+flet build web -v
+```
+
+For more details on building Web app, refer to the [Web Packaging Guide](https://flet.dev/docs/publish/web/).
 
 ## 🧠 System Design Learnings
 
