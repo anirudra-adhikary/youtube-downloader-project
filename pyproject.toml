@@ -1,0 +1,52 @@
+[project]
+name = "youtube-downloader-project"
+version = "0.1.0"
+description = "youtube downloader with youtube search option"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "shanku", email = "you@example.com" },
+    { name = "anirudra", email = "you@example.com" }
+]
+dependencies = [
+    "annotated-doc>=0.0.4",
+    "annotated-types>=0.7.0",
+    "anyio>=4.13.0",
+    "click>=8.4.1",
+    "fastapi>=0.136.3",
+    "flet>=0.85.3",
+    "h11>=0.16.0",
+    "idna>=3.16",
+    "jinja2>=3.1.6",
+    "markupsafe>=3.0.3",
+    "mutagen>=1.47.0",
+    "pydantic>=2.13.4",
+    "pydantic-core>=2.46.4",
+    "pyinstaller>=6.21.0",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.29",
+    "starlette>=1.1.0",
+    "typing-extensions>=4.15.0",
+    "typing-inspection>=0.4.2",
+    "uvicorn>=0.48.0",
+    "yt-dlp>=2026.3.17",
+]
+
+[dependency-groups]
+dev = [
+    "flet-cli>=0.85.3",
+    "flet-desktop>=0.85.3",
+    "flet-web>=0.85.3",
+]
+
+[tool.flet]
+desktop_flavor = "light"    # Change to "full" to use flet-audio and flet-video
+org = "com.github.shnku"
+product = "youtube-downloader-project"
+company = "shnku"
+copyright = "Copyright (C) 2023-2026 by shnku"
+
+[tool.flet.app]             # Entrypoint of flet app
+path = "."
+module = "flet_gui"
+
