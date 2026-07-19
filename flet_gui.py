@@ -1,10 +1,14 @@
 import asyncio
 from dataclasses import dataclass, field
-from flet.controls.core.column import Column
+import logging
 
 import flet as ft
+from flet.controls.core.column import Column
 
 from main import download_video, search_and_select, show_formats
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("flet").setLevel(logging.DEBUG)
 
 
 @ft.observable
@@ -13,7 +17,7 @@ class DownloaderViewModel:
     # --- The Model (Pure State) ---
     search_query: str = ""
     url: str = ""
-    format_selection: int | None = None
+    selected_download_format: int | None = None
 
     search_results: list[dict] | list = field(default_factory=list)
     available_formats: list[dict] | list = field(default_factory=list)
@@ -25,16 +29,9 @@ class DownloaderViewModel:
     download_complete: bool = False
 
     # --- The ViewModel (Logic) ---
-    async def process_input(self, input_text: str):
-        self.search_query = input_text
-        self.reset_states()
-
-        if not input_text.startswith(("http://", "https://", "www.")):
-            await self._handle_search(input_text)
-        else:
-            await self._handle_link(input_text)
 
     async def _handle_search(self, search_text: str):
+        self.search_query = search_text
         self.is_searching = True
         await asyncio.sleep(1)
         results = search_and_select(search_text, num_results=10, cli=False)
@@ -53,21 +50,26 @@ class DownloaderViewModel:
         self.is_fetching_formats = False
 
     def select_format(self, format_id: int):
-        self.format_selection = format_id
+        self.selected_download_format = format_id
 
     async def download(self):
-        if not self.url or not self.format_selection:
+        storage = ft.StoragePaths()
+        if not self.url or not self.selected_download_format:
             return
         self.is_downloading = True
+        sys_download_path = await storage.get_downloads_directory()
+        print(sys_download_path)
         await asyncio.sleep(1)
-        ret_val = download_video(self.url, self.format_selection)
+        ret_val = download_video(
+            self.url, self.selected_download_format, output_dir=str(sys_download_path)
+        )
         if ret_val:
             self.download_complete = True
         self.is_downloading = False
 
     def clear_all(self):
         self.search_query = self.url = ""
-        self.format_selection = None
+        self.selected_download_format = None
         self.reset_states()
 
     def reset_states(self):
@@ -79,11 +81,11 @@ class DownloaderViewModel:
 
 
 @ft.component
-def SearchTiles(i):
-    value, _ = ft.use_state(DownloaderViewModel())
-
+def SearchTiles(i, app_state: DownloaderViewModel):
     async def tile_clicked(e: ft.Event[ft.ListTile]):
-        value.select_format(e.control.value)
+        print("clock", e.control.data)
+        ft.context.page.navigate("/download")
+        await app_state._handle_link(e.control.data)
 
     return ft.ListTile(
         leading=ft.Icon(ft.Icons.SMART_DISPLAY_OUTLINED),
@@ -95,125 +97,146 @@ def SearchTiles(i):
 
 
 @ft.component
-def SearchView() -> Column:
-    value, _ = ft.use_state(DownloaderViewModel())
-
+def SearchView(app_state: DownloaderViewModel) -> Column:
     async def handle_submit(e: ft.Event[ft.SearchBar]):
-        input_str: str = e.data
+        app_state.reset_states()
+        input_str = str(e.data)
         print(f"Submit: {input_str}")
-        if input_str:
-            await value.process_input(input_str)
+        if input_str and not input_str.startswith(("http://", "https://", "www.")):
+            await app_state._handle_search(input_str)
+        else:
+            ft.context.page.navigate("/download")
+            await app_state._handle_link(input_str)
 
     return ft.Column(
-        [
+        spacing=25,
+        expand=True,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
             ft.SearchBar(
                 view_elevation=4,
                 bar_hint_text="Search YouTube or Put download link...",
-                view_leading=ft.Icon(ft.Icons.SEARCH),
-                bar_leading=ft.Icon(ft.Icons.SEARCH),
+                bar_leading=ft.Icon(ft.Icons.SEARCH, margin=ft.Margin(12, 1, 5)),
+                autofocus=True,
                 on_submit=handle_submit,
-                bar_trailing=[
-                    ft.Icon(ft.Icons.SEARCH_ROUNDED),
-                ],
             ),
             ft.Shimmer(
                 ft.Column(
-                    [
-                        ft.Row(
-                            [
-                                ft.Container(height=54, bgcolor=ft.Colors.GREY_300),
-                                ft.Column(
-                                    controls=[
-                                        ft.Container(
-                                            height=10, bgcolor=ft.Colors.GREY_300
-                                        )
-                                        for _ in range(3)
-                                    ],
-                                ),
-                            ],
-                        )
+                    controls=[
+                        ft.Container(height=50, bgcolor=ft.Colors.GREY_300)
                         for _ in range(10)
                     ],
-                    scroll=ft.ScrollMode.ALWAYS,
+                    scroll=ft.ScrollMode.AUTO,
+                    margin=ft.Margin(8, 0, 8),
+                    expand=True,
                 ),
                 base_color=ft.Colors.with_opacity(0.3, ft.Colors.GREY_400),
                 highlight_color=ft.Colors.WHITE_60,
-                # visible=not value.is_searching,
-                visible=True,
+                visible=app_state.is_searching,
             ),
             ft.Column(
-                controls=[SearchTiles(i) for i in value.search_results],
-                scroll=ft.ScrollMode.ALWAYS,
+                controls=[SearchTiles(i, app_state) for i in app_state.search_results],
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
             ),
-        ]
+        ],
     )
 
 
 @ft.component
 def DownloadOptions(i):
     return ft.DropdownOption(
-        text=f"{i.get('resolution'):<10} | {i.get('extension'):<8} | {i.get('size')}",
+        text=f"{i.get('resolution'):<10} | {i.get('extension'):<8} | {i.get('size'):<8} | {i.get('content')}",
         key=i.get("id"),
     )
 
 
 @ft.component
-def DownloaderView() -> Column:
-    value, _ = ft.use_state(DownloaderViewModel())
-
-    async def format_selected(e):
-        value.select_format(e.control.value)
+def DownloaderView(app_state: DownloaderViewModel) -> Column:
+    def format_selected(e):
+        app_state.select_format(e.control.value)
 
     async def start_download(e):
-        await value.download()
+        try:
+            await app_state.download()
+        except e:
+            ft.context.page.show_dialog(
+                ft.SnackBar(ft.Text("Error Downloading", color=ft.Colors.RED))
+            )
+            app_state.clear_all()
+
+    def reset_click(e):
+        app_state.clear_all()
+        ft.context.page.navigate("/")
 
     return ft.Column(
-        [
+        spacing=30,
+        expand=True,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[  # pyright: ignore[reportArgumentType]
+            ft.ProgressRing(
+                visible=app_state.is_fetching_formats,
+                padding=90,
+                tooltip="fetching available formats ...",
+            ),
             ft.Dropdown(
-                options=[DownloadOptions(i) for i in value.available_formats],
-                visible=len(value.available_formats) > 0,
+                options=[DownloadOptions(i) for i in app_state.available_formats],
+                visible=len(app_state.available_formats) > 0,
+                margin=ft.Margin(0, 30, 0, 20),
                 on_select=format_selected,
                 label="Select Format",
+                value=str(app_state.selected_download_format),
             ),
-            # Download Controls
             ft.Button(
                 "Download",
                 visible=(
-                    value.format_selection is not None
-                    and not value.is_downloading
-                    and not value.download_complete
+                    app_state.selected_download_format is not None
+                    and not app_state.is_downloading
+                    and not app_state.download_complete
                 ),
                 on_click=start_download,
             ),
-            ft.ProgressBar(visible=value.is_downloading),
+            ft.ProgressBar(
+                visible=app_state.is_downloading,
+                tooltip="downloading...",
+                height=20,
+                margin=25,
+            ),
             ft.Text(
                 "✅ Download Completed",
-                visible=value.download_complete,
+                visible=app_state.download_complete,
                 color=ft.Colors.GREEN,
             ),
             ft.Button(
                 "Clear All",
-                on_click=lambda e: value.clear_all(),
-                visible=len(value.search_results) > 0
-                or len(value.available_formats) > 0,
+                on_click=reset_click,
             ),
-        ]
+        ],
     )
 
 
-# =============== main GUI part ================ #
+# =============== main App View ================ #
+@ft.component
+def App():
+    app_state, _ = ft.use_state(lambda: DownloaderViewModel())
+    return ft.SafeArea(
+        ft.Router(
+            [
+                ft.Route(index=True, component=lambda: SearchView(app_state)),
+                ft.Route(path="download", component=lambda: DownloaderView(app_state)),
+            ],
+        ),
+        expand=True,  # need for scroll
+    )
+
+
 def main(page: ft.Page):
-    page.window.width = 600
+    page.window.width = 500
     page.window.height = 700
+    page.title = "YT Downloader Proj"
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    # page.scroll=ft.ScrollMode.AUTO
     page.appbar = ft.AppBar(title=ft.Text("YouTube Downloader"), center_title=True)
-
-    # ❌ THE ISSUE: page.add() is for the old imperative controls
-    # page.add(DownloaderView())
-
-    # ✅ THE FIX: page.render() mounts declarative components
-    page.render(SearchView)
+    page.render(App)
 
 
 if __name__ == "__main__":
