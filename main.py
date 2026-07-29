@@ -1,14 +1,43 @@
 import os
 import yt_dlp
 
+import subprocess
+
 def my_hook(d):
     if d['status'] == 'finished':
-        print("Done downloading, starting post-processing...")
+        print("Done downloading, intercepting thumbnail for cropping...")
+        
+        try:
+            # Get the exact filename yt-dlp just saved
+            filename = d.get('info_dict', {}).get('_filename', d.get('filename'))
+            if filename:
+                base_name = os.path.splitext(filename)[0]
+                
+                # Check for the thumbnail file (usually .webp or .jpg)
+                for ext in ['.jpg', '.webp', '.png', '.jpeg']:
+                    thumb_path = base_name + ext
+                    
+                    if os.path.exists(thumb_path):
+                        print("Cropping album art to a perfect center square...")
+                        tmp_path = base_name + '_tmp' + ext
+                        
+                        # Force FFmpeg to slice off the sidebars directly on the disk file
+                        subprocess.run([
+                            'ffmpeg', '-y', '-i', thumb_path,
+                            '-vf', 'crop=ih:ih', tmp_path
+                        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        
+                        # Overwrite the original with our cropped square
+                        if os.path.exists(tmp_path):
+                            os.replace(tmp_path, thumb_path)
+                        break
+        except Exception as e:
+            print(f"Thumbnail intercept failed: {e}")
+
     elif d['status'] == 'downloading':
         percent = d.get('_percent_str', '0%')
         speed = d.get('_speed_str', 'N/A')
         eta = d.get('_eta_str', 'N/A')
-
         print(f"Downloading: {percent} at {speed} ETA {eta}")
 
 
@@ -72,32 +101,30 @@ def download_audio(url, output_dir='downloads'):
         os.makedirs(output_dir)
 
     ydl_opts = {
-        # Grab the absolute highest quality Opus audio
-        'format': 'bestaudio[acodec=opus]/bestaudio',
+        'format': 'bestaudio[ext=m4a]/bestaudio',
         'writethumbnail': True,
         'js_runtimes': {
             'node': {}
         },
-        'restrictfilenames': True,
+        'restrictfilenames': False,
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'progress_hooks': [my_hook],
+        'overwrites': True, # Overwrite if you are testing the same song again
+        
         'postprocessors': [
-            # 1. Extract the native Opus stream (Zero quality loss, supports metadata)
             {
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'opus', 
+                'preferredcodec': 'm4a', 
             },
-            # 2. Convert thumbnail to jpg
+            # Convert our newly cropped square into a standard JPG
             {
                 'key': 'FFmpegThumbnailsConvertor',
                 'format': 'jpg',
             },
-            # 3. Add metadata
             {
                 'key': 'FFmpegMetadata',
                 'add_metadata': True,
             },
-            # 4. Embed thumbnail into audio file
             {
                 'key': 'EmbedThumbnail',
             },
@@ -105,14 +132,13 @@ def download_audio(url, output_dir='downloads'):
     }
 
     try:
-        print(f"\nStarting high-quality audio download:\n{url}\n")
+        print(f"\nStarting audio download:\n{url}\n")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         print("\nDownload complete! Check your 'downloads' folder.")
     except Exception as e:
         print(f"\nAn error occurred:\n{e}")
-
-
+        
 def show_formats(url):
     with yt_dlp.YoutubeDL() as ydl:
         try:
@@ -178,7 +204,7 @@ def download_video(url, output_dir='downloads'):
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'progress_hooks': [my_hook],
-        'restrictfilenames': True,
+        'restrictfilenames': False,
     }
 
     try:
