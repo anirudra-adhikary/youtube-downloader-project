@@ -1,0 +1,52 @@
+[project]
+name = "youtube-downloader-project"
+version = "0.1.0"
+description = "YouTube Downloader with YouTube Search feature & Custom Format Selection option"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "shanku", email = "you@example.com" },
+    { name = "anirudra", email = "you@example.com" }
+]
+dependencies = [            # core dependencies
+    "flet>=0.85.3",
+    "mutagen>=1.47.0",
+    "yt-dlp>=2026.3.17",
+]
+
+[dependency-groups]
+build = [                   # to build without flutter SDK
+    "pyinstaller>=6.21.0",
+]
+dev = [
+    "flet-cli>=0.85.3",
+    "flet-desktop>=0.85.3",
+    "flet-web>=0.85.3",
+]
+web-fastapi = [             # fastapi webapp in `web.py`
+    "fastapi>=0.136.3",
+    "python-multipart>=0.0.29",
+]
+
+[tool.flet]
+desktop_flavor = "light"    # Change to "full" to use flet-audio and flet-video
+org = "com.github.shnku"
+product = "yt-dwnlodr-proj"
+company = "shnku"
+copyright = "Copyright (C) 2023-2026 by shnku"
+
+[tool.flet.app]             # Entrypoint of flet app
+path = "."
+module = "flet_gui"
+
+[tool.flet.boot_screen.flet]
+theme_mode = "auto"
+spinner_size = 30
+startup_message = "Starting up…"
+
+[tool.flet.android]
+split_per_abi = true
+
+[tool.flet.android.permission]
+"android.permission.READ_EXTERNAL_STORAGE" = true
+"android.permission.WRITE_EXTERNAL_STORAGE" = true

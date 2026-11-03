@@ -39,9 +39,12 @@ youtube-downloader-project/
 ├── templates/           # HTML templates for the web interface
 ├── crop.py              # Script for processing and cropping media
 ├── main.py              # Application entry point / core execution logic
+├── flet_gui.py          # GUI flet Application entry point
 ├── web.py               # Web server and routing logic
-├── requirements.txt     # Python dependencies
-└── .gitignore           # Ignored files and directories
+├── requirements.txt     # Python dependencies (minimal)
+├── .gitignore           # Ignored files and directories
+├── pyproject.toml         # standard build‑tool metadata file, requires for `flet build`
+└── requirements-flet.txt  # Python dependencies for flet GUI app development
 
 ```
 
@@ -78,7 +81,7 @@ Make sure you have Python installed on your system.
 
 ```bash
    pip install -r requirements.txt
-
+   # use `requirements-flet.txt` for flet app development
 ```
 
 ## 💻 Usage
@@ -92,6 +95,36 @@ Make sure you have Python installed on your system.
 
 2. Open your web browser and navigate to the localhost port specified in the console (usually `http://127.0.0.1:5000` or `http://127.0.0.1:8000`).
 3. Enter a valid YouTube URL into the interface and initiate the download.
+
+### Run as Flet app (GUI)
+
+```bash
+# Run as a desktop app:
+flet run flet_gui.py
+
+# Run as a web app:
+flet run --web flet_gui.py
+```
+
+For more details on running the **Flet app**, refer to the [Getting Started Guide](https://flet.dev/docs/).
+
+### Build the flet app
+
+```bash
+flet build apk -v       # Build as Android apk
+
+flet build ipa -v       # Build as iOS app
+
+flet build macos -v     # Build as macOS app
+
+flet build linux -v     # Build as Linux app
+
+flet build windows -v   # Build as Windows app
+
+flet build web -v       # Build as Web app
+```
+
+For more details on building flet app, refer to the [Packaging Guide](https://flet.dev/docs/publish/).
 
 ## 🧠 System Design Learnings
 

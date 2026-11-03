@@ -1,12 +1,10 @@
 import os
 import yt_dlp
-
 import subprocess
 
 def my_hook(d):
     if d['status'] == 'finished':
         print("Done downloading, intercepting thumbnail for cropping...")
-        
         try:
             # Get the exact filename yt-dlp just saved
             filename = d.get('info_dict', {}).get('_filename', d.get('filename'))
@@ -39,9 +37,11 @@ def my_hook(d):
         speed = d.get('_speed_str', 'N/A')
         eta = d.get('_eta_str', 'N/A')
         print(f"Downloading: {percent} at {speed} ETA {eta}")
+        # Kept the contributor's dictionary return for your API
+        return {"percent": percent, "speed": speed, "ETA": eta}
 
 
-def search_and_select(query, num_results=5):
+def search_and_select(query, num_results=5, cli=True):
     print(f"\nSearching YouTube for: '{query}'...")
     
     ydl_opts = {
@@ -51,6 +51,7 @@ def search_and_select(query, num_results=5):
     }
     
     search_query = f"ytsearch{num_results}:{query}"
+    result_list = []
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -78,10 +79,16 @@ def search_and_select(query, num_results=5):
 
         print(f"[{i+1}] {title}")
         print(f"    Channel: {uploader} | Duration: {dur_str}\n")
-
+        
+        # Kept the contributor's dictionary structure for your backend
+        result_list.append({
+            "title": title, "channel": uploader, "duration": dur_str,
+            "download_url": entry.get("url"),
+        })
+        
     print("[0] Cancel")
 
-    while True:
+    while cli and True:
         try:
             choice = int(input(f"Select a video (0-{len(entries)}): ").strip())
             if choice == 0:
@@ -94,6 +101,8 @@ def search_and_select(query, num_results=5):
             print("Invalid choice. Try again.")
         except ValueError:
             print("Please enter a valid number.")
+    
+    return result_list
 
 
 def download_audio(url, output_dir='downloads'):
@@ -101,22 +110,20 @@ def download_audio(url, output_dir='downloads'):
         os.makedirs(output_dir)
 
     ydl_opts = {
-        'format': 'bestaudio[ext=m4a]/bestaudio',
+        'format': 'bestaudio[acodec=opus]/bestaudio',
         'writethumbnail': True,
         'js_runtimes': {
             'node': {}
         },
-        'restrictfilenames': False,
+        'restrictfilenames': False, # Restored to False
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'progress_hooks': [my_hook],
-        'overwrites': True, # Overwrite if you are testing the same song again
-        
+        'overwrites': True, 
         'postprocessors': [
             {
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'm4a', 
+                'preferredcodec': 'opus', 
             },
-            # Convert our newly cropped square into a standard JPG
             {
                 'key': 'FFmpegThumbnailsConvertor',
                 'format': 'jpg',
@@ -132,19 +139,23 @@ def download_audio(url, output_dir='downloads'):
     }
 
     try:
-        print(f"\nStarting audio download:\n{url}\n")
+        print(f"\nStarting high-quality audio download:\n{url}\n")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         print("\nDownload complete! Check your 'downloads' folder.")
     except Exception as e:
         print(f"\nAn error occurred:\n{e}")
-        
-def show_formats(url):
+
+
+def show_formats(url, cli=False):
+    list_of_formats = []
+    
     ydl_opts = {
-        'js_runtimes': {'node': {}}, # Applied anti-bot here
+        'js_runtimes': {'node': {}}, # Restored Anti-bot
         'quiet': True,
         'no_warnings': True
     }
+    
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=False)
@@ -188,31 +199,36 @@ def show_formats(url):
             f"{f_id:<10} {ext:<10} {res:<15} "
             f"{content_type:<15} {size_mb:<12} {note}"
         )
+        
+        list_of_formats.append({
+            "id": f_id, "extension": ext, "resolution": res, 
+            "content": content_type, "size": size_mb, "note": note
+        })
+        
+    if cli:
+        choice = input("\nEnter Format ID (example: 18 or 137+140): ")
+        return choice
+    else:
+        return list_of_formats or ["no data"]
 
-    choice = input("\nEnter Format ID (example: 18 or 137+140): ")
-    return choice
 
-
-def download_video(url, output_dir='downloads'):
+def download_video(url, selected_format, cli=False, output_dir='downloads'):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
-    # selected_format = show_formats(url)
-
-    # if not selected_format:
-    #     print("No format selected.")
-    #     return
+        
+    if not selected_format:
+        print("No format selected.")
+        return
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        # REMOVED 'merge_output_format': 'mp4'. 
-        # By removing this, yt-dlp will automatically choose MKV or MP4 based on the video codecs.
+        'format': selected_format,
+        # 'merge_output_format': 'mp4', # Removed to let MKV/MP4 be chosen dynamically
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'progress_hooks': [my_hook],
-        'restrictfilenames': False,
+        'restrictfilenames': False, # Restored to False
         'js_runtimes': {
-            'node': {} # Applied anti-bot here
+            'node': {} # Restored Anti-bot
         },
     }
 
@@ -225,6 +241,8 @@ def download_video(url, output_dir='downloads'):
         print(f"\nDownload error:\n{e}")
     except Exception as e:
         print(f"\nUnexpected error:\n{e}")
+    return True
+
 
 if __name__ == "__main__":
     print("=== YouTube Media Downloader ===")
@@ -252,6 +270,7 @@ if __name__ == "__main__":
     if choice == 'y':
         download_audio(url)
     elif choice == 'n':
-        download_video(url)
+        get_download_format = show_formats(url, cli=True)
+        download_video(url=url, selected_format=get_download_format, cli=True)
     else:
         print("Invalid choice")
