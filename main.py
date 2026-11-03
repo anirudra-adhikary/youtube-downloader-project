@@ -140,7 +140,12 @@ def download_audio(url, output_dir='downloads'):
         print(f"\nAn error occurred:\n{e}")
         
 def show_formats(url):
-    with yt_dlp.YoutubeDL() as ydl:
+    ydl_opts = {
+        'js_runtimes': {'node': {}}, # Applied anti-bot here
+        'quiet': True,
+        'no_warnings': True
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=False)
             formats = info.get('formats', [])
@@ -192,19 +197,23 @@ def download_video(url, output_dir='downloads'):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    selected_format = show_formats(url)
+    # selected_format = show_formats(url)
 
-    if not selected_format:
-        print("No format selected.")
-        return
+    # if not selected_format:
+    #     print("No format selected.")
+    #     return
 
     ydl_opts = {
-        'format': selected_format,
-        'merge_output_format': 'mp4',
+        'format': 'bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        # REMOVED 'merge_output_format': 'mp4'. 
+        # By removing this, yt-dlp will automatically choose MKV or MP4 based on the video codecs.
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'progress_hooks': [my_hook],
         'restrictfilenames': False,
+        'js_runtimes': {
+            'node': {} # Applied anti-bot here
+        },
     }
 
     try:
@@ -216,7 +225,6 @@ def download_video(url, output_dir='downloads'):
         print(f"\nDownload error:\n{e}")
     except Exception as e:
         print(f"\nUnexpected error:\n{e}")
-
 
 if __name__ == "__main__":
     print("=== YouTube Media Downloader ===")
